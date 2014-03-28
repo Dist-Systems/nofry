@@ -1,0 +1,11 @@
+#!/bin/bash
+source $(dirname $0)/assert.sh --verbose
+assert "why"
+assert "echo test" "test"
+assert_raises "exit 127" 127
+_low=`test 63 > 65`
+assert_raises $_low 0
+assert_end "the end"
+exit
+RETURN_CDU_TEMP_ERROR=check_cdu_temp
+assert_raises $RETURN_CDU_TEMP_ERROR 1

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+#######################################
+# Power on all outlets that match the (required parameter) group
+#
+# Globals:
+#    None
+# Arguments:
+#    $group_string (criticality)
+# Returns: 
+#    None
+# 
+# Short Description: When passed the correct arguement,
+#                    this script will query the database 
+#                    for all such outlets and turn them on.
+#
+#######################################
+
+source $(dirname $0)/lib/killbot.conf
+source $(dirname $0)/lib/powerstrip_utilities.sh
+
+#######################################
+SCRIPT_USER=$(logname)
+RUN_AS=$(id -urn)
+
+# Gathering the data
+rows=$(sqlite3 ${DB_NAME} "SELECT * FROM outlet_info")
+row_count=$(sqlite3 ${DB_NAME} "SELECT count(*) FROM outlet_info")
+
+# Prompting the user before continuing
+echo "Using ${DB_NAME}"
+echo "    this will affect ${row_count} outlets, continue? [y/N]" 
+read CONTINUE
+if [[ ${CONTINUE} == 'y' ]]; then
+    echo "continuing..."
+    logger "[$(basename $0)] started by ${SCRIPT_USER} (${RUN_AS}) begin powering on ${row_count} outlets..." 
+else
+    echo "quitting!"
+    exit
+fi
+
+# For each row
+for row in $rows; do
+    # Parsing data (sqlite3 returns a pipe separated string)
+    id=$(echo $row | awk '{split($0,a,"|"); print a[1]}')
+    name=$(echo $row | awk '{split($0,a,"|"); print a[2]}')
+    ip=$(echo $row | awk '{split($0,a,"|"); print a[3]}')
+    tipe=$(echo $row | awk '{split($0,a,"|"); print a[4]}')
+    bank=$(echo $row | awk '{split($0,a,"|"); print a[5]}')
+    outlet=$(echo $row | awk '{split($0,a,"|"); print a[6]}')
+    criticality=$(echo $row | awk '{split($0,a,"|"); print a[7]}')
+     
+    # Printing the data
+    #echo -e "\e[4m${id}\e[m) ${name} -> ${ip} -> ${outlet} -> ${bank}" ;
+    #echo "${name} ${outlet} ${criticality}";
+
+    $(power_on ${name} ${outlet} ${bank})
+    ret=${?}
+    
+    if [ "$bank" -ne "1" ]; then
+        echo "Power on ${criticality} outlet ${outlet} on bank ${bank} (${name}) - ${ret}"
+    else
+        echo "power on ${criticality} outlet ${outlet} (${name}) - ${ret}"
+    fi
+done
+logger "[`basename $0`] finished powering on ${row_count} unconfigured outlets." 

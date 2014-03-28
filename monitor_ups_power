@@ -1,0 +1,68 @@
+#!/bin/bash
+
+#######################################
+#
+#
+# Globals:
+#    #TODO
+#    
+# Arguments:
+#    None
+# Returns: 
+#    None
+# 
+# Short Description: Monitors the status of the UPS, sends  
+#                    email/trap warnings when on bypass and sets 
+#                    the signal on the NMS
+#
+#######################################
+
+source $(dirname $0)/lib/killbot.conf
+source $(dirname $0)/lib/misc_utilities.sh
+source $(dirname $0)/lib/env_sensing_utilities.sh
+
+SLEEP_INTERVAL=1
+SIGNAL_SET=0
+
+COUNTER=4
+while [ $COUNTER -gt 0 ];do
+  check_ups_on_bypass ${UPS1_URL} ${UPS_SNMP_COMMUNITY}
+  LIEBERT1_ON_BYPASS=$ON_BYPASS
+
+  check_ups_on_bypass  ${UPS1_URL} ${UPS_SNMP_COMMUNITY}
+  LIEBERT2_ON_BYPASS=$ON_BYPASS
+
+  # DEBUGGING BLOCK
+  # if [ $COUNTER -eq 2 ];then
+  #   LIEBERT2_ON_BYPASS=1
+  # elif [ $COUNTER -eq 1 ];then
+  #   LIEBERT2_ON_BYPASS=2
+  # fi
+
+  #echo "[ LIEBERT2 $LIEBERT2_ON_BYPASS ]"
+
+  if [ $LIEBERT1_ON_BYPASS -ne 2 ] || [ $LIEBERT2_ON_BYPASS -ne 2 ]; then
+    #echo "UPS on bypass -> set the SNMP signal"
+    if [ $SIGNAL_SET -ne 1 ]; then
+      SIGNAL_SET=1
+      #logger message #TODO
+      #signal_function 1 #TODO
+
+      #DEBUG echo "logger set the signal"
+    fi
+  else
+    #echo "all is well"
+    if [ $SIGNAL_SET -ne 0 ]; then
+      SIGNAL_SET=0
+      #logger message #TODO
+      #signal_function 0 #TODO
+
+      #DEBUG echo "returned to normal"
+    fi
+  fi
+
+  #echo "$COUNTER: Sleeping ($SLEEP_INTERVAL seconds)"
+  #COUNTER=$(($COUNTER - 1))
+
+  sleep $SLEEP_INTERVAL
+done

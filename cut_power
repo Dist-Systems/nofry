@@ -1,0 +1,61 @@
+#!/bin/bash
+
+#######################################
+# Cuts power to all outlets that match the (required parameter) group
+#
+# Globals:
+#    None
+# Arguments:
+#    $group_string (criticality)
+# Returns: 
+#    None
+# 
+# Short Description: When passed the correct arguement,
+#                    this script will query the database 
+#                    for all such outlets and turn them 
+#                    off.
+#
+#######################################
+
+source $(dirname $0)/lib/testing.conf
+source $(dirname $0)/lib/misc_utilities.sh
+source $(dirname $0)/lib/env_sensing_utilities.sh
+
+#logger "[`basename $0`] starting" 
+
+#######################################
+
+usage() { echo "Usage: $0 [-s <NC|C2>]" 1>&2; exit 1; }
+
+while getopts ":s:" o; do
+    case "${o}" in
+        s)
+            s=${OPTARG}
+            ((s == 'NC' || s == 'C2')) || usage
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -z "${s}" ]; then
+    usage
+else
+         
+  # Getting my data
+  rows=$(sqlite3 ${DB_NAME} "SELECT * FROM outlet_info WHERE criticality='${s}'")
+   
+  # For each row
+  for row in $rows; do
+      # Parsing data (sqlite3 returns a pipe separated string)
+      Id=$(echo $row | awk '{split($0,a,"|"); print a[1]}')
+      Name=$(echo $row | awk '{split($0,a,"|"); print a[2]}')
+      Value=$(echo $row | awk '{split($0,a,"|"); print a[3]}')
+       
+      # Printing my data
+      #echo -e "\e[4m$Id\e[m) "$Name" -> "$Value;
+      echo ${Name} 
+  done
+fi

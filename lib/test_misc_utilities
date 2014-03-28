@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#######################################
+# Script Name: test_misc_utilities
+#
+# Short Description: tests the methods in ./lib/misc_utilities
+#
+# Author: Noah Spahn
+#
+# Date: 09/11/2013
+#
+#######################################
+source $(dirname $0)/testing.conf
+source $(dirname $0)/misc_utilities.sh
+#source $(dirname $0)/assert.sh --verbose
+source $(dirname $0)/assert.sh
+
+#######################################
+# test failure of notify_email()
+return_error=notify_email
+assert_raises $return_error 1
+
+# TODO there could be many more complex tests for failure...
+
+# test the sucess of notify_email()
+$(notify_email "$TEST_EMAIL" "$TEST_SUBJ" "$TEST_MSG")
+send=$_
+assert $send
+# TODO there could be more precise testing of success 
+#   (that a message was actually sent)
+assert_end "notify_email()"
+
+#######################################
+# test failure of notify_trap()
+return_error=notify_trap
+assert_raises $return_error 1
+
+# test return value with correct params 
+# TODO extract these parameters to the conf file
+return_success=$(notify_trap "nofry" NHDC::shutdownTrapNC NHDC::shutdownFlag.0 3)
+assert $return_success
+
+#######################################
+# test that trap was logged locally
+# TODO: we are not sending traps right now- test this when you need it
+# updated=$(stat /var/log/snmptraps |grep Change|awk '{ print $2 }') #2013-11-07
+# today=`date +%Y-%m-%d`
+# assert "echo $updated" $today
+assert_end "notify_trap()"
+
+#######################################
+# test failure of update_status
+update_status_error=update_status
+assert_raises $update_status_error 1
+
+# test failure on wrong integer value
+update_status_error2=$(update_status 6)
+assert_raises "[[ $? -eq 1 ]]" 0
+
+# TODO testing success of update_status actually updates status
+# we should test this is a test environment
+# update_status_success=$(update_status 0)
+# assert_raises "[[ $? -eq 0 ]]" 0
+
+# TODO
+# consider expanding the test to ensure that the value is written to test file
+# that the file locking works and the previous status was archived
+
+assert_end "update_status()"
