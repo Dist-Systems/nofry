@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#######################################
+# Short Description: Populates database of power strips & outlets, labels outlet priority
+#
+# Globals:
+#    TODO: revisit this 
+#    
+# Arguments:
+#    None
+# Returns: 
+#    None
+#
+#######################################
+
+# Working paths
+source $(dirname $0)/lib/killbot.conf
+source $LIB/powerstrip_utilities.sh
+
+STRIPID=0
+BANK="1"
+
+start_time=$(date +%s)
+
+echo "Starting the power strip process"
+
+temp_db="${APP_ROOT}/${DB_TEMPORARY}"
+prod_db="${APP_ROOT}/${DB_NAME}"
+
+# Create a new database, and define the tables within it.
+if [ ! -f $temp_db ]; then
+    echo "creating db: $temp_db"
+    create_db $temp_db
+else
+    echo "[WARNING] db: $temp_db already exists"
+    # this means that the last run was bad - we should send a warning...
+fi
+
+echo "  processing 16 outlet strips"
+loop_over_one_bank "$SIXTEEN_OUTLET_LIST" $temp_db
+echo "  processing 24 outlet strips"
+loop_over_one_bank "$TWENTYFOUR_OUTLET_LIST" $temp_db
+echo "  processing 24 (3 fuse) outlet strips"
+loop_over_three_bank "$TWENTYFOUR_OUTLET_3FUSE_LIST" $temp_db
+echo "done"
+
+#######################################
+# Is the temp (new) database of a reasonable size?
+bytes=$(stat -t $temp_db | awk {'print $2'})
+
+if [ $bytes -gt 2300 ];then
+    # If there is already a database there 
+    # (after the first run, this should 
+    # always be the case)
+    if [ -f $prod_db ];then
+        # archive the database
+        mv $prod_db $DB_ARCHIVE/$start_time.db
+        mv $temp_db $prod_db
+        echo "$prod_db ($bytes bytes) created"
+        echo "previous database archived ($DB_ARCHIVE/$start_time.db)"
+    else
+        echo "$prod_db not found"
+    fi
+else
+    echo "New database is smaller than expected ($bytes b), keeping old $prod_db";
+    exit 1;
+fi
+echo "Total execution time: $(expr $(date +%s) - $start_time) s"
+exit 0;

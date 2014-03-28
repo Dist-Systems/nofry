@@ -1,0 +1,112 @@
+#!/bin/bash
+
+#######################################
+#
+# Script Name: test_powerstrip_utilities
+#
+# Short Description: tests the methods in ./lib/powerstrip_utilities
+#
+# Author: Noah Spahn
+#
+# Date: 08/1/2013
+#
+#######################################
+
+source $(dirname $0)/testing.conf
+source $(dirname $0)/powerstrip_utilities.sh
+#source $(dirname $0)/assert.sh --verbose
+source $(dirname $0)/assert.sh
+
+
+#######################################
+# remove the database because we are done with it
+if [[ -e $DB_NAME ]]; then
+  rm $DB_NAME
+else
+  echo "$DB_NAME is not present"
+fi
+# assert $(test -e $DB_NAME) $DB_NAME
+# assert $(rm $DB_NAME) $DB_NAME
+
+assert_end "Remove test database"
+
+#######################################
+# test failure of report_crit_role()
+return_error=report_crit_role
+assert_raises $return_error 1
+# test the actual functionality of report_crit_role()
+#TODO revise this function to not use glocals
+report_crit_role "C1_isareallycriticalbox"
+assert "echo ${CRIT_ROLE}" "C1"
+report_crit_role "C2_isfairlycritical"
+assert "echo ${CRIT_ROLE}" "C2"
+report_crit_role "NC_isaregularboc"
+assert "echo ${CRIT_ROLE}" "NC"
+report_crit_role "thisisnotcongigured"
+assert "echo ${CRIT_ROLE}" "UN"
+assert_end "report_crit_role()"
+
+#######################################
+# start by testing failure of the create_db() method
+fail_to_make_db=create_db
+assert $fail_to_make_db "$0 requires a string (db name)"
+assert_raises $fail_to_make_db 1
+
+# start by testing create_db() method
+make_db=$(create_db $DB_NAME)
+assert $make_db
+assert_raises $make_db
+assert_end "create_db()"
+
+#######################################
+# testing failure of loop_over_one_bank() method
+fail_to_loop1=loop_over_one_bank
+assert_raises $fail_to_loop1 1
+
+# test loop_over_one_bank() method
+#echo " ---- using test list:$DB_NAME ----"
+loop_over_one_bank "$TEST_LIST" $DB_NAME
+strip_count=$(sqlite3 $DB_NAME "SELECT COUNT(*) FROM strips;")
+assert "echo $strip_count" "1" 
+outlet_count=$(sqlite3 $DB_NAME "SELECT COUNT(*) FROM outlets;")
+assert "echo $outlet_count" "10" 
+assert_end "loop_over_one_bank()"
+
+#######################################
+# test loop_over_three_bank() failure
+fail_to_loop3=loop_over_three_bank
+assert_raises $fail_to_loop3 1
+
+# test loop_over_three_bank() 
+loop_over_three_bank "$TEST_3FUSE_LIST" $DB_NAME
+outlet_3_count=$(sqlite3 $DB_NAME "SELECT COUNT(*) FROM outlets;")
+difference=$(expr $outlet_3_count - $outlet_count)
+assert "echo $difference" "24" 
+strip_3count=$(sqlite3 $DB_NAME "SELECT COUNT(*) FROM strips;")
+strip_difference=$(expr $strip_3count - $strip_count)
+assert "echo $strip_difference" "1" 
+assert_end "loop_over_three_bank()"
+
+#######################################
+fail2addstrip=add_strip
+assert_raises $fail2addstrip 1
+# The following sql insert should fail: table definition won't allow duplicates
+# expecting "Error: constraint failed"
+add_query="INSERT INTO strips (object_id,dns_name,ip,type) VALUES (${TEST_OID},${TEST_CDU},${TEST_CDU_IP},'SentrySwitchedCDU');"
+# echo "ADD_QUERY -> $ADD_QUERY"
+dangerousdaddstrip=$(sqlite3 $DB_NAME $add_query>/dev/null 2>&1 )
+# SQL failure returns 127
+assert $dangerousdaddstrip 
+assert_end "add_strip()"
+
+#######################################
+fail2addoutlet=add_outlet
+assert_raises $fail2addoutlet 1
+
+# This test shows that there is the ability to add a duplicate outlet
+# it could be considered a bug if not properly handled in the code
+dangerousaddoutlet2=$(sqlite3 $DB_NAME "INSERT INTO outlets (strip,bank,outlet,criticality) VALUES (2, 2, 2,'NC');")
+assert_raises $dangerousaddoutlet2
+
+assert_end "add_outlet()"
+

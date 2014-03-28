@@ -1,0 +1,62 @@
+#!/bin/bash
+
+source $(dirname $0)/lib/testing.conf
+
+host=$(hostname -s)
+date=$(date '+%m-%d-%Y')
+
+echo "Subject: $host Automation QA [${date}]"
+
+printf ".... %50s ....\n" "Service Status"
+echo $(service nhdc-statusd status)
+echo $(service nhdc-tempd status)
+echo $(service nhdc-upspowerd status)
+echo $(service nhdc-upstempd status)
+echo ""
+
+printf ".... %50s ....\n" "chkconfig Status"
+chkconfig --list|grep nhdc
+echo ""
+
+if [ -x /opt/nofry/process_strips_outlets ] ; then
+    echo ""
+    printf ".... %50s ...." "Rebuilding the Prioritized Power-Off Outlet List"
+    echo ""
+    # run the outlet processing script
+    /opt/nofry/process_strips_outlets 
+    echo ""
+    echo "done rebuilding"
+    echo ""
+fi
+
+working_dir=$(pwd)
+
+cd ${APP_ROOT}
+
+printf ".... %50s ....\n" "Query the powerstrip DB"
+# Total outlet count
+outlet_count=$(sqlite3 ${PROD_DB_NAME} "SELECT COUNT(*) FROM outlets")
+
+# Outlet group counts
+un_outlet_count=$(sqlite3 ${PROD_DB_NAME} "SELECT COUNT(*) FROM outlets WHERE criticality='UN'")
+nc_outlet_count=$(sqlite3 ${PROD_DB_NAME} "SELECT COUNT(*) FROM outlets WHERE criticality='NC'")
+c2_outlet_count=$(sqlite3 ${PROD_DB_NAME} "SELECT COUNT(*) FROM outlets WHERE criticality='C2'")
+c1_outlet_count=$(sqlite3 ${PROD_DB_NAME} "SELECT COUNT(*) FROM outlets WHERE criticality='C1'")
+
+# Report
+echo "   UN :  ${un_outlet_count}"
+echo "   NC :  ${nc_outlet_count}"
+echo "   C2 :  ${c2_outlet_count}"
+echo "   C1 :  ${c1_outlet_count}"
+
+echo "total : $((un_outlet_count+nc_outlet_count+c2_outlet_count+c1_outlet_count))  - [${outlet_count}]" # this check should be calculated (from the PDUs)
+
+cd $working_dir
+
+printf ".... %50s ....\n" "Automated testing (${date})"
+# Loop over all tests in the library
+for TEST in `ls /opt/nofry/lib/test_*`; do
+  testname=$(basename $TEST)
+  printf "\tTESTING ---> [ %s ]\n" $testname
+  $TEST
+done

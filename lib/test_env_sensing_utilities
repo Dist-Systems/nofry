@@ -1,0 +1,120 @@
+#!/bin/bash
+
+#######################################
+# Script Name: test_env_sensing_utilities
+#
+# Short Description: tests the methods in ./lib/environmental_utilities
+#
+# built with assert.sh (https://github.com/lehmannro/assert.sh)
+#
+# which provides:	
+#   assert <command> [stdout] [stdin]
+#   assert_raises <command> [exitcode] [stdin]
+#   assert_end [suite]
+#
+# Author: Noah Spahn
+#
+# Date: 08/1/2013
+#
+#######################################
+
+source $(dirname $0)/testing.conf
+source $(dirname $0)/env_sensing_utilities.sh
+#source $(dirname $0)/assert.sh -x -v
+source $(dirname $0)/assert.sh
+
+readonly _minTemp=63
+readonly _maxTemp=85
+
+#######################################
+# test error calling check_cdu_temp()
+[[ $DEBUG ]] && echo "error calling check_cdu_temp() with no params"
+return_cdu_temp_error=check_cdu_temp
+assert_raises $return_cdu_temp_error 1
+# test the actual functionality of check_cdu_temp()
+[[ $DEBUG ]] && echo "success of check_cdu_temp()"
+cdu_temp=$(check_cdu_temp $TEST_CDU)
+assert_raises "[[ $? -eq 0 ]]" 0
+
+[[ -n "$DEBUG" ]] && echo ""
+
+# The cdu_temp should be greater than 65 degrees
+[[ $DEBUG ]] && echo "CDU_TEMP (set by the method) should be > $_minTemp & < $_maxTemp"
+assert_raises "[[ $cdu_temp -gt $_minTemp ]] && [[ $cdu_temp -lt $_maxTemp ]]" 0 
+assert_end "check_cdu_temp()"
+
+[[ -n "$DEBUG" ]] && echo ""
+
+#######################################
+# test the error calling getMaxTemp_upsRoom()
+[[ $DEBUG ]] && echo "error calling getMaxTemp_upsRoom with no params"
+ups_room_temp_error=$(getMaxTemp_upsRoom)
+assert_raises "[[ $? -eq 1 ]]" 0
+# test that giving the method only 1 parameter fails
+[[ $DEBUG ]] && echo "error calling getMaxTemp_upsRoom with 1 param"
+ups_room_temp_error_str=$(getMaxTemp_upsRoom $TEST_UPSROOM)
+assert_raises "[[ $? -eq 1 ]]" 0
+
+# test the success of getMaxTemp_upsRoom()
+[[ $DEBUG ]] && echo "success of getMaxTemp_upsRoom with both params"
+ups_hightemp=$(getMaxTemp_upsRoom $TEST_UPSROOM $TEST_SNMP_READSTR)
+assert_raises "[[ $? -eq 0 ]]" 0
+
+[[ -n "$DEBUG" ]] && echo "upsroom HIGHTEMP: $ups_hightemp is between $_minTemp & $_maxTemp"
+assert_raises "[[ $ups_hightemp -gt $_minTemp ]] && [[ $ups_hightemp -lt $_maxTemp ]]" 0 
+
+assert_end "getMaxTemp_upsRoom()"
+
+[[ -n "$DEBUG" ]] && echo ""
+
+#######################################
+# check getMaxTemp_nhdc()
+[[ $DEBUG ]] && echo "error calling getMaxTemp_nhdc with no params"
+nhdc_room_temp_error=getMaxTemp_nhdc
+assert_raises $nhdc_room_temp_error 1
+
+[[ $DEBUG ]] && echo "error calling getMaxTemp_nhdc with 1 param"
+nhdc_room_temp_error_str=$(getMaxTemp_nhdc $TEST_NHDC_ROOM)
+assert_raises "[[ $? -eq 1 ]]" 0  
+
+[[ $DEBUG ]] && echo "success of getMaxTemp_nhdc with both params"
+nhdc_room_temp=$(getMaxTemp_nhdc $TEST_NHDC_ROOM $TEST_SNMP_READSTR)
+assert_raises "[[ $? -eq 0 ]]" 0
+
+[[ -n "$DEBUG" ]] && echo "nhdc room HIGHTEMP: $nhdc_room_temp is between $_minTemp & $_maxTemp"
+assert_raises "[[ $nhdc_room_temp -gt $_minTemp ]] && [[ $nhdc_room_temp -lt $_maxTemp ]]" 0 
+
+[[ -n "$DEBUG" ]] && echo "nhdc room HIGHTEMP: $nhdc_room_temp is != ups HIGHTEMP $UPS_HIGHTEMP"
+nhdc_hightemp=$nhdc_room_temp
+
+# there is usually a difference of a few degrees between the NHDC and the UPS room
+# It could indicate a problem if they were the same
+assert_raises "[[ $nhdc_hightemp -ne $ups_hightemp ]]" 0
+
+assert_end "getMaxTemp_nhdc()"
+
+
+[[ -n "$DEBUG" ]] && echo ""
+
+#######################################
+# check if Liebert UPS is on bypass
+[[ -n "$DEBUG" ]] && echo "error calling check_ups_on_bypass with 0 params"
+return_on_bypass_error=$(check_ups_on_bypass)
+assert_raises "[[ $? -eq 1 ]]" 0
+
+[[ -n "$DEBUG" ]] && echo "error calling check_ups_on_bypass with 1 param"
+return_on_bypass_error1=$(check_ups_on_bypass $TEST_UPS_URL)
+assert_raises "[[ $? -eq 1 ]]" 0
+
+[[ -n "$DEBUG" ]] && echo "success of check_ups_on_bypass with 2 params"
+check_on_bypass=$(check_ups_on_bypass $TEST_UPS_URL $TEST_UPS_READSTR)
+assert_raises "[[ $? -eq 0 ]]" 0
+[[ -n "$DEBUG" ]] && echo "success of check_ups_on_bypass- ups should not be on bypass when we test"
+bypass_false=2
+assert_raises "[[ $check_on_bypass -eq $bypass_false ]]" 0
+assert_end "check_ups_onbypass()"
+
+exit
+########
+#TODO add a method called check_ups_fail
+########

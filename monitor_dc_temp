@@ -1,0 +1,70 @@
+#!/bin/bash
+
+#######################################
+# Monitor temperatures in NHDC and take actions as appropriate
+#
+# Globals:
+#    SIGNAL_THRESHOLD
+#    NC_THRESHOLD
+# Arguments:
+#    None
+# Returns: 
+#    None
+# 
+# Short Description: Monitors the temperature levels in the nhdc, sends a 
+#                    email/trap warnings when temperatures reach the
+#                    SIGNAL_THRESHOLD cuts power to NC gear when temps 
+#                    reach NC_THRESHOLD.
+#
+#######################################
+
+source $(dirname $0)/lib/killbot.conf
+source $(dirname $0)/lib/misc_utilities.sh
+source $(dirname $0)/lib/env_sensing_utilities.sh
+
+logger "[`basename $0`] starting" 
+
+#######################################
+# the Non-Critical loop- if temp rises above threshold, set status to 2
+
+counter=1     #TODO comment out
+
+while [ $counter -gt 0 ]
+do
+  hightemp=$(getMaxTemp_nhdc ${NHDC_ROOM} 'public')
+  
+  # counter=$((counter - 1))
+
+  if [ $hightemp -gt $NC_THRESHOLD ]; then
+
+    logger "[`basename $0`][WARNING] (${hightemp} degrees) in the NHDC"
+    
+    # Set the signal to 2
+    update_status 2
+
+    break;
+  fi
+done
+
+#######################################
+# the Critical 2 loop- if temp rises above threshold, set status to 3
+
+counter=1
+while [ $counter -gt 0 ]; do
+  highertemp=$(getMaxTemp_nhdc ${NHDC_ROOM} 'public')
+
+  logger "[`basename $0`] - continuing to watch temperature (${hightemp} -> ${highertemp})"
+  # counter=$((counter - 1))
+
+  if [ $highertemp -gt $C2_THRESHOLD ]; then
+    # Temperatures have reached critical levels - cut power to C2
+    logger "[`basename $0`][WARNING] (${highertemp} degrees) in the UPS room "
+
+    # Set the signal to 3
+    update_status 3
+
+    break;
+  fi
+done
+
+logger "[`basename $0`] finished running"

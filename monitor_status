@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#######################################
+# Monitor the status integer and take appropriate action upon status change
+#
+# Globals:
+#    TODO
+# Arguments:
+#    None
+# Returns: 
+#    None
+# 
+# Short Description: Monitors the status integer of the Data Center
+#                    and dispatches appropriate action when the status 
+#                    changes.
+#
+#######################################
+
+source $(dirname $0)/lib/killbot.conf
+source $(dirname $0)/lib/misc_utilities.sh
+
+last_status=$(cat $STATUS_FILE)
+
+logger "$0 starting with ${last_status} in ${STATUS_FILE}"
+
+while true; do
+  current_status=$(cat $STATUS_FILE)
+  if [ $current_status -ne $last_status ]; then
+    logger "$0 status changed: ${last_status} -> ${current_status} in ${STATUS_FILE}"
+    dispatch_action $current_status
+  fi
+  sleep 3
+  last_status=$current_status
+done
