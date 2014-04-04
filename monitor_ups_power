@@ -47,8 +47,6 @@ while [ $COUNTER -gt 0 ];do
       SIGNAL_SET=1
       #logger message #TODO
       #signal_function 1 #TODO
-
-      #DEBUG echo "logger set the signal"
     fi
   else
     #echo "all is well"
@@ -56,8 +54,6 @@ while [ $COUNTER -gt 0 ];do
       SIGNAL_SET=0
       #logger message #TODO
       #signal_function 0 #TODO
-
-      #DEBUG echo "returned to normal"
     fi
   fi
 
