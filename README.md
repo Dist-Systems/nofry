@@ -4,7 +4,7 @@ read the wiki: https://github.com/Dist-Systems/nofry/wiki
 
 
 ### Mission 
-NoFry system exists as a courtesy service to North Hall Data Center (NHDC) customers. Data center management necessitates taking action under exceptional conditions, to minimize hardware damage and data loss. NoFry monitors and publishes the datacenter conditions, reports on extreme conditions that would require taking preventative action and notifies customers before taking such actions.
+NoFry system exists as a courtesy service to data center customers. Data center management necessitates taking action under exceptional conditions, to minimize hardware damage and data loss. NoFry monitors and publishes the datacenter conditions, reports on extreme conditions that would require taking preventative action and notifies customers before taking such actions.
 
 Consequently, the primary objectives of NoFry are:
 
