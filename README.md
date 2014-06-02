@@ -1,6 +1,6 @@
 ### NoFry
 
-read the wiki: https://github.com/Dist-Systems/nofry/wiki
+https://github.com/Dist-Systems/nofry/wiki
 
 
 ### Mission 
